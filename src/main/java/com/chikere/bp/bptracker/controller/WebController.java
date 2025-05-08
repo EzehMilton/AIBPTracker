@@ -13,6 +13,13 @@ import com.chikere.bp.bptracker.model.enums.Gender;
 import com.chikere.bp.bptracker.service.PatientService;
 import com.chikere.bp.bptracker.service.ReadingService;
 import com.chikere.bp.bptracker.service.RiskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -26,11 +33,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.UUID;
 
 /**
- * Controller for handling web views using Thymeleaf templates.
+ * Controller for handling web views using Thymeleaf templates and API endpoints.
  */
 @Controller
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Blood Pressure Tracker", description = "API for managing patients, readings, and risk assessments")
 public class WebController {
     private final PatientService patientService;
     private final ReadingService readingService;
@@ -269,6 +277,22 @@ public class WebController {
     /**
      * Download all readings as CSV
      */
+    @Operation(
+        summary = "Download all readings as CSV",
+        description = "Exports all blood pressure readings in the system as a CSV file"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "CSV file generated successfully",
+            content = @Content(mediaType = "text/csv", schema = @Schema(implementation = String.class))
+        ),
+        @ApiResponse(
+            responseCode = "204", 
+            description = "No readings found to export",
+            content = @Content
+        )
+    })
     @GetMapping("/readings/download-csv")
     public ResponseEntity<String> downloadAllReadingsAsCsv() {
         log.debug("Web request to download all readings as CSV");
@@ -292,9 +316,33 @@ public class WebController {
     /**
      * API endpoint for AI risk analysis
      */
+    @Operation(
+        summary = "Analyze patient risk with AI",
+        description = "Performs an AI-based risk assessment for a patient based on their blood pressure readings. " +
+                      "Requires at least 3 readings for the patient."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Risk assessment successful",
+            content = @Content(mediaType = "text/plain", schema = @Schema(implementation = String.class))
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Patient does not have enough readings",
+            content = @Content(mediaType = "text/plain", schema = @Schema(implementation = String.class))
+        ),
+        @ApiResponse(
+            responseCode = "500", 
+            description = "Error performing risk analysis",
+            content = @Content(mediaType = "text/plain", schema = @Schema(implementation = String.class))
+        )
+    })
     @GetMapping("/v1/api/risk/{patientId}/analyzeAI")
     @ResponseBody
-    public ResponseEntity<String> analyzeRiskWithAI(@PathVariable UUID patientId) {
+    public ResponseEntity<String> analyzeRiskWithAI(
+            @Parameter(description = "ID of the patient to analyze", required = true)
+            @PathVariable UUID patientId) {
         log.debug("API request to analyze risk with AI for patient with ID: {}", patientId);
         try {
             // Check if patient has enough readings for risk assessment
